@@ -1,14 +1,21 @@
 FROM ghcr.io/astral-sh/uv:debian
 
 WORKDIR /app
-COPY ./pyproject.toml .
-COPY ./uv.lock .
-COPY ./README.md .
-COPY ./.python-version .
-COPY ./pocket_tts ./pocket_tts
 
-RUN uv run pocket-tts serve --help && \
-    rm -rf /root/.cache/uv && \
-    uv run pocket-tts serve --help
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
-CMD ["uv", "run", "pocket-tts", "serve"]
+RUN git clone https://github.com/kyutai-labs/pocket-tts.git .
+
+COPY wyoming_tts_server.py .
+
+RUN uv add "wyoming>=1.8,<2" zeroconf
+
+ENV WYOMING_PORT=10201
+ENV WYOMING_HOST=0.0.0.0
+ENV DEFAULT_VOICE=alba
+ENV MODEL_VARIANT=b6369a24
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 10201
+
+CMD ["uv", "run", "python", "wyoming_tts_server.py"]
