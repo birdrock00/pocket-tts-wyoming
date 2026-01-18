@@ -4,12 +4,12 @@ Wyoming protocol server for [Pocket-TTS](https://github.com/kyutai-labs/pocket-t
 
 ## Quick Start with Docker Compose
 
-Create a `docker-compose.yml` file (or use the file included in this project):
+Use the included `docker-compose.yml` file:
 
 ```yaml
 services:
   pocket-tts-wyoming:
-    build: .
+    image: ghcr.io/ikidd/pocket-tts-wyoming:latest
     container_name: pocket-tts-wyoming
     network_mode: host
     environment:
@@ -42,16 +42,21 @@ You can customize the following environment variables in the compose file before
 | `MODEL_VARIANT` | `b6369a24` | The Pocket-TTS model variant to use. This corresponds to a specific model checkpoint. |
 | `ZEROCONF` | `pocket-tts` | Service name for mDNS/Zeroconf discovery. Home Assistant uses this to auto-discover the TTS server. Set to empty string to disable. |
 
-Build and start:
+Pull and start:
 
 ```bash
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
-## Building the Docker Image Manually
+The pre-built image is automatically updated via GitHub Actions when changes are pushed to the repository or when the upstream [Pocket-TTS](https://github.com/kyutai-labs/pocket-tts) repository is updated.
+
+## Using the Pre-built Image
+
+The image is available on GitHub Container Registry:
 
 ```bash
-docker build -t pocket-tts-wyoming .
+docker pull ghcr.io/ikidd/pocket-tts-wyoming:latest
 ```
 
 ## Running with Docker
@@ -59,14 +64,26 @@ docker build -t pocket-tts-wyoming .
 ```bash
 docker run -d \
   --name pocket-tts-wyoming \
-  -p 10201:10201 \
+  --network host \
   -e DEFAULT_VOICE=alba \
+  -e MODEL_VARIANT=b6369a24 \
+  -e ZEROCONF=pocket-tts \
   -v pocket-tts-hf-cache:/root/.cache/huggingface \
   -v pocket-tts-cache:/root/.cache/pocket_tts \
-  pocket-tts-wyoming
+  ghcr.io/ikidd/pocket-tts-wyoming:latest
 ```
 
 The volume mounts are recommended to cache model files and avoid re-downloads on restart.
+
+## Building the Docker Image Manually
+
+If you prefer to build the image locally instead of using the pre-built image:
+
+```bash
+docker build -t pocket-tts-wyoming .
+```
+
+Then update `docker-compose.yml` to use `build: .` instead of `image: ghcr.io/ikidd/pocket-tts-wyoming:latest`.
 
 
 
@@ -87,5 +104,7 @@ The server supports Zeroconf/mDNS for automatic discovery.
 ## Troubleshooting
 
 - **Slow startup**: First run downloads ~500MB of model weights. Use volume mounts to persist the cache.
-- **Connection issues**: Verify port 10201 is open and check logs with `docker logs pocket-tts-wyoming`
+- **Connection issues**: Verify port 10201 is open and check logs with `docker compose logs pocket-tts-wyoming` or `docker logs pocket-tts-wyoming`
 - **Voice not found**: Ensure the voice name matches one of the 8 predefined voices listed above.
+- **Image pull issues**: If you encounter authentication issues pulling from GHCR, ensure you're logged in: `docker login ghcr.io`
+- **Outdated image**: Pull the latest image with `docker compose pull` or `docker pull ghcr.io/ikidd/pocket-tts-wyoming:latest`
