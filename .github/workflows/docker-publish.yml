@@ -44,9 +44,9 @@ jobs:
           # Get latest commit SHA from upstream
           LATEST_SHA=$(curl -s "https://api.github.com/repos/${UPSTREAM_REPO}/commits/${UPSTREAM_BRANCH}" | jq -r '.sha')
           
-          # Get last tracked SHA (if file exists)
-          if [ -f .last-upstream-sha ]; then
-            LAST_SHA=$(cat .last-upstream-sha)
+          # Get last tracked SHA from README.md
+          if grep -qP '\*\*Last Upstream SHA\*\*:' README.md; then
+            LAST_SHA=$(grep -oP '(?<=\*\*Last Upstream SHA\*\*: ).*' README.md | tr -d ' ')
           else
             LAST_SHA=""
           fi
@@ -63,15 +63,65 @@ jobs:
             echo "No changes detected in upstream repository."
           fi
 
-      - name: Update tracked SHA
-        if: github.event_name == 'schedule' && steps.check-upstream.outputs.has_changes == 'true'
+      - name: Set timestamps and SHA
+        id: set-timestamps
+        if: github.event_name == 'schedule'
         run: |
-          echo "${{ steps.check-upstream.outputs.new_sha }}" > .last-upstream-sha
+          current_timestamp=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          
+          # Read current values from README.md
+          if grep -qP '\*\*⏳ Last Build On\*\*:' README.md; then
+            last_build_timestamp=$(grep -oP '(?<=\*\*⏳ Last Build On\*\*: ).*' README.md)
+          else
+            last_build_timestamp="Never"
+          fi
+          
+          if grep -qP '\*\*Last Upstream SHA\*\*:' README.md; then
+            current_sha=$(grep -oP '(?<=\*\*Last Upstream SHA\*\*: ).*' README.md | tr -d ' ')
+          else
+            current_sha=""
+          fi
+          
+          # If a build is triggered, update build timestamp and SHA
+          if [[ "${{ steps.check-upstream.outputs.has_changes }}" == "true" ]]; then
+            build_timestamp=$current_timestamp
+            new_sha="${{ steps.check-upstream.outputs.new_sha }}"
+          else
+            # Otherwise, keep existing values
+            build_timestamp=$last_build_timestamp
+            new_sha=$current_sha
+          fi
+          
+          # Set values in environment variables for the next steps
+          echo "last_run=$current_timestamp" >> $GITHUB_ENV
+          echo "last_build=$build_timestamp" >> $GITHUB_ENV
+          echo "upstream_sha=$new_sha" >> $GITHUB_ENV
+
+      - name: Update README with SHA and timestamps
+        if: github.event_name == 'schedule'
+        run: |
+          # Remove any old status info
+          sed -i '/^## 📅 Release Status/,/^$/d' README.md
+          
+          # Add the updated status info
+          echo -e "## 📅 Release Status" >> README.md
+          echo -e "- **⏳ Last Build On**: ${{ env.last_build }}" >> README.md
+          echo -e "- **🔄 Last Run**: ${{ env.last_run }}" >> README.md
+          echo -e "- **Last Upstream SHA**: ${{ env.upstream_sha }}" >> README.md
+
+      - name: Commit and push README update
+        if: github.event_name == 'schedule'
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .last-upstream-sha
-          git commit -m "Update upstream SHA to ${{ steps.check-upstream.outputs.new_sha }}" || exit 0
-          git push || exit 0
+          
+          if git diff --quiet; then
+            echo "README unchanged, skipping commit."
+          else
+            git add README.md
+            git commit -m "📝 Update upstream SHA and timestamps in README [workflow]" || exit 0
+            git push || exit 0
+          fi
 
       - name: Set up Docker Buildx
         if: github.event_name != 'schedule' || steps.check-upstream.outputs.has_changes == 'true'
