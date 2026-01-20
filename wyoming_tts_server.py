@@ -10,6 +10,8 @@ import argparse
 import asyncio
 import logging
 import os
+import wave
+from datetime import datetime
 from functools import partial
 from typing import Optional
 
@@ -36,6 +38,7 @@ _LOGGER = logging.getLogger(__name__)
 DEFAULT_PORT = int(os.environ.get("WYOMING_PORT", "10201"))
 DEFAULT_VOICE = os.environ.get("DEFAULT_VOICE", "alba")
 MODEL_VARIANT = os.environ.get("MODEL_VARIANT", DEFAULT_VARIANT)
+DEBUG_WAV = os.environ.get("DEBUG_WAV", "").lower() in ("true", "1", "yes")
 
 _VOICE_STATES: dict[str, dict] = {}
 _VOICE_LOCK = asyncio.Lock()
@@ -222,6 +225,20 @@ class PocketTTSEventHandler(AsyncEventHandler):
                 full_audio = (full_audio.clip(-1.0, 1.0) * 32767).astype("int16")
                 audio_bytes = full_audio.tobytes()
 
+                # Write debug WAV file if enabled
+                if self.cli_args.debug_wav:
+                    try:
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                        wav_filename = f"/app/debug_{voice_name}_{timestamp}.wav"
+                        with wave.open(wav_filename, "wb") as wav_file:
+                            wav_file.setnchannels(channels)
+                            wav_file.setsampwidth(width)
+                            wav_file.setframerate(sample_rate)
+                            wav_file.writeframes(audio_bytes)
+                        _LOGGER.debug("Debug WAV file written: %s", wav_filename)
+                    except Exception as e:
+                        _LOGGER.warning("Failed to write debug WAV file: %s", e)
+
                 num_chunks = int(numpy.ceil(len(audio_bytes) / bytes_per_chunk))
                 for i in range(num_chunks):
                     offset = i * bytes_per_chunk
@@ -295,6 +312,12 @@ async def main() -> None:
         "--debug",
         action="store_true",
         help="Log DEBUG messages",
+    )
+    parser.add_argument(
+        "--debug-wav",
+        action="store_true",
+        default=DEBUG_WAV,
+        help="Write complete WAV file to /app/ on every response (default: from DEBUG_WAV env var)",
     )
     parser.add_argument(
         "--log-format",
