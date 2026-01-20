@@ -86,7 +86,6 @@ docker build -t pocket-tts-wyoming .
 Then update `docker-compose.yml` to use `build: .` instead of `image: ghcr.io/ikidd/pocket-tts-wyoming:latest`.
 
 
-
 ## Available Voices
 
 alba, marius, javert, jean, fantine, cosette, eponine, azelma
