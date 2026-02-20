@@ -396,8 +396,8 @@ async def main() -> None:
 
     os.environ["MODEL_VARIANT"] = args.variant
     variant = os.environ.get("MODEL_VARIANT", MODEL_VARIANT)
-    _LOGGER.info("Loading Pocket-TTS model (variant: %s)...", variant)
-    tts_model = TTSModel.load_model(variant=variant)
+    _LOGGER.info("Loading Pocket-TTS model...")
+    tts_model = TTSModel.load_model()
     _LOGGER.info("Model loaded successfully")
     _LOGGER.info("Sample rate: %d Hz", tts_model.sample_rate)
 
