@@ -1,4 +1,4 @@
-# Pocket-TTS Wyoming Protocol Server
+# Pocket-TTS Wyoming Protocol Servers
 
 Wyoming protocol server for [Pocket-TTS](https://github.com/kyutai-labs/pocket-tts), enabling Home Assistant integration with voice selection support.
 
