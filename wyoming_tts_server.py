@@ -8,9 +8,11 @@ exposing available voices to Home Assistant for selection.
 
 import argparse
 import asyncio
+import inspect
 import logging
 import os
 import wave
+from pathlib import Path
 from datetime import datetime
 from functools import partial
 from typing import Optional
@@ -18,8 +20,19 @@ from typing import Optional
 import numpy
 
 from pocket_tts import TTSModel
-from pocket_tts.default_parameters import DEFAULT_VARIANT
-from pocket_tts.utils.utils import PREDEFINED_VOICES
+try:
+    from pocket_tts.default_parameters import DEFAULT_VARIANT
+except ImportError:
+    from pocket_tts.default_parameters import DEFAULT_LANGUAGE
+
+    DEFAULT_VARIANT = DEFAULT_LANGUAGE
+
+try:
+    from pocket_tts.utils.utils import PREDEFINED_VOICES
+except ImportError:
+    from pocket_tts.utils.utils import _ORIGINS_OF_PREDEFINED_VOICES
+
+    PREDEFINED_VOICES = _ORIGINS_OF_PREDEFINED_VOICES
 from wyoming.audio import AudioChunk, AudioStart, AudioStop
 from wyoming.error import Error
 from wyoming.event import Event
@@ -39,6 +52,9 @@ DEFAULT_PORT = int(os.environ.get("WYOMING_PORT", "10201"))
 DEFAULT_VOICE = os.environ.get("DEFAULT_VOICE", "alba")
 MODEL_VARIANT = os.environ.get("MODEL_VARIANT", DEFAULT_VARIANT)
 DEBUG_WAV = os.environ.get("DEBUG_WAV", "").lower() in ("true", "1", "yes")
+LEGACY_MODEL_VARIANTS = {
+    "b6369a24": "english_2026-01",
+}
 
 # Prefix trimming tunables (in seconds)
 # Minimum time before looking for the pause after the sacrificial prefix
@@ -50,6 +66,32 @@ PREFIX_SILENCE_GAP = float(os.environ.get("PREFIX_SILENCE_GAP", "0.08"))
 
 _VOICE_STATES: dict[str, dict] = {}
 _VOICE_LOCK = asyncio.Lock()
+
+
+def load_tts_model(model_variant: str) -> TTSModel:
+    """Load Pocket-TTS across the old variant API and current language/config API."""
+    variant = (model_variant or "").strip()
+    load_model_params = inspect.signature(TTSModel.load_model).parameters
+
+    if "language" not in load_model_params:
+        return TTSModel.load_model(config=variant or DEFAULT_VARIANT)
+
+    if variant in LEGACY_MODEL_VARIANTS:
+        language = LEGACY_MODEL_VARIANTS[variant]
+        _LOGGER.info(
+            "Mapping legacy Pocket-TTS model variant '%s' to language '%s'",
+            variant,
+            language,
+        )
+        return TTSModel.load_model(language=language)
+
+    if not variant:
+        return TTSModel.load_model()
+
+    if variant.endswith((".yaml", ".yml")) or os.path.sep in variant or Path(variant).exists():
+        return TTSModel.load_model(config=variant)
+
+    return TTSModel.load_model(language=variant)
 
 
 class PocketTTSEventHandler(AsyncEventHandler):
@@ -397,7 +439,7 @@ async def main() -> None:
     os.environ["MODEL_VARIANT"] = args.variant
     variant = os.environ.get("MODEL_VARIANT", MODEL_VARIANT)
     _LOGGER.info("Loading Pocket-TTS model (variant: %s)...", variant)
-    tts_model = TTSModel.load_model(config=variant)
+    tts_model = load_tts_model(variant)
     _LOGGER.info("Model loaded successfully")
     _LOGGER.info("Sample rate: %d Hz", tts_model.sample_rate)
 
