@@ -135,6 +135,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set release date tag
+        id: release-date
+        if: github.event_name != 'schedule' || steps.check-upstream.outputs.has_changes == 'true'
+        run: echo "tag=$(date -u +'%m-%d-%Y')" >> "$GITHUB_OUTPUT"
+
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         if: github.event_name != 'schedule' || steps.check-upstream.outputs.has_changes == 'true'
@@ -148,6 +153,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ steps.release-date.outputs.tag }},enable={{is_default_branch}}
             type=raw,value=auto-update,enable=${{ github.event_name == 'schedule' }}
 
       - name: Build and push Docker image
@@ -160,4 +166,3 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
