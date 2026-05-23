@@ -166,3 +166,15 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Create release for daily image
+        if: github.event_name != 'pull_request' && (github.event_name != 'schedule' || steps.check-upstream.outputs.has_changes == 'true')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: image-${{ steps.release-date.outputs.tag }}-${{ github.run_id }}
+          name: Container image ${{ steps.release-date.outputs.tag }}
+          body: |
+            Container image for ${{ steps.release-date.outputs.tag }}:
+
+            `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.release-date.outputs.tag }}`
+          make_latest: true
