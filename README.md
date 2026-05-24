@@ -49,7 +49,7 @@ docker compose pull
 docker compose up -d
 ```
 
-The pre-built image is automatically updated via GitHub Actions when changes are pushed to the repository or when the upstream [Pocket-TTS](https://github.com/kyutai-labs/pocket-tts) repository is updated.
+The pre-built image is updated manually through GitHub Actions after reviewing changes in the upstream [Pocket-TTS](https://github.com/kyutai-labs/pocket-tts) repository.
 
 ## Using the Pre-built Image
 
