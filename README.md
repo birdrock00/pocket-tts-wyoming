@@ -16,7 +16,7 @@ services:
       - WYOMING_PORT=10201
       - WYOMING_HOST=0.0.0.0
       - DEFAULT_VOICE=alba
-      - MODEL_VARIANT=b6369a24
+      - MODEL_VARIANT=english
       - ZEROCONF=pocket-tts
     restart: unless-stopped
     volumes:
@@ -39,7 +39,7 @@ You can customize the following environment variables in the compose file before
 | `WYOMING_PORT` | `10201` | The port the Wyoming protocol server listens on. Change if you have a conflict with another service. |
 | `WYOMING_HOST` | `0.0.0.0` | The network interface to bind to. `0.0.0.0` accepts connections from any interface. |
 | `DEFAULT_VOICE` | `alba` | The default voice used when none is specified. See [Available Voices](#available-voices) for options. |
-| `MODEL_VARIANT` | `b6369a24` | The Pocket-TTS model variant to use. This corresponds to a specific model checkpoint. |
+| `MODEL_VARIANT` | `english` | The Pocket-TTS language to use. |
 | `ZEROCONF` | `pocket-tts` | Service name for mDNS/Zeroconf discovery. Home Assistant uses this to auto-discover the TTS server. Set to empty string to disable. |
 
 Pull and start:
@@ -49,7 +49,7 @@ docker compose pull
 docker compose up -d
 ```
 
-The pre-built image is updated manually through GitHub Actions after reviewing changes in the upstream [Pocket-TTS](https://github.com/kyutai-labs/pocket-tts) repository.
+The pre-built image is automatically updated via GitHub Actions when changes are pushed to the repository or when the upstream [Pocket-TTS](https://github.com/kyutai-labs/pocket-tts) repository is updated.
 
 ## Using the Pre-built Image
 
@@ -66,7 +66,7 @@ docker run -d \
   --name pocket-tts-wyoming \
   --network host \
   -e DEFAULT_VOICE=alba \
-  -e MODEL_VARIANT=b6369a24 \
+  -e MODEL_VARIANT=english \
   -e ZEROCONF=pocket-tts \
   -v pocket-tts-hf-cache:/root/.cache/huggingface \
   -v pocket-tts-cache:/root/.cache/pocket_tts \
@@ -144,6 +144,6 @@ Audio-prompt based TTS models like Pocket-TTS can "swallow" the first word into 
 - **🔄 Last Run**: 2026-01-20 00:30:58 UTC
 - **Last Upstream SHA**: 6f9dd250c24ee85cecc5587902a684f0d82b2a0d 
 ## 📅 Release Status
-- **⏳ Last Build On**: 2026-05-24 02:57:53 UTC
-- **🔄 Last Run**: 2026-05-24 02:57:53 UTC
-- **Last Upstream SHA**: 1fadd1cac53fce23bed4501f905e63e82e77c64a
+- **⏳ Last Build On**: 2026-10-13 06:07:00 UTC
+- **🔄 Last Run**: 2026-10-13 06:07:00 UTC
+- **Last Upstream SHA**: b94db177bc0f77517d9b124843e25605d6f9aed8
